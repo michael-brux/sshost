@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sshost"
+version = "0.0.1"
+authors = [
+    {name = "Michael Brux", email = "sshost@x7b.uk"},
+]
+description = "SSH Connectivity Checker"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/michael-brux/sshost"
+"Bug Tracker" = "https://github.com/michael-brux/sshost/issues"
