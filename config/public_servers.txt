@@ -1,0 +1,7 @@
+github.com
+gitlab.com
+bitbucket.org
+git.sr.ht
+launchpad.net
+invent.kde.org
+codeberg.org
