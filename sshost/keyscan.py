@@ -11,9 +11,11 @@ MAX_PARAMETERS = 256
 CMDPATH = which('ssh-keyscan')
 
 
-def run_keyscan(hosts: list | str, port: int = 22) -> subprocess.CompletedProcess:
+def run_keyscan(hosts: list | str, port: int | None = None) -> subprocess.CompletedProcess:
     hosts = [hosts] if isinstance(hosts, str) else hosts
-    cmd = [CMDPATH, '-p', str(port)]
+    cmd = [CMDPATH]
+    if port:
+        cmd += ['-p', str(port)]
     input_data = None
 
     if len(hosts) > MAX_PARAMETERS:
@@ -28,17 +30,19 @@ def run_keyscan(hosts: list | str, port: int = 22) -> subprocess.CompletedProces
                           capture_output=True)
 
 
-def resolve_hostname(hostname: str, ip_version: Literal['ipv4', 'ipv6', 'both'] = 'both') -> List[str]:
+def resolve_hostname(hostname: str, ip_version: Literal['ipv4', 'ipv6', 'both', 'any'] = 'any') -> List[str]:
     """
     Resolve hostname to IP addresses based on the specified IP version.
 
     Args:
         hostname: The hostname to resolve
         ip_version: 'ipv4', 'ipv6', or 'both' to specify which IP version to resolve
-
     Returns:
         List of resolved IP addresses
     """
+    if ip_version == 'any':
+        ip_version = 'both'  # both addresses needed
+
     addresses = []
 
     # Skip resolution if the input is already an IP address matching the requested version
@@ -93,8 +97,9 @@ def is_valid_ipv6(address: str) -> bool:
 
 
 def keyscan(hosts: Union[str, List[str]],
-            config_file: str = None,
-            ip_version: Literal['ipv4', 'ipv6', 'both'] = 'both') -> List[Dict]:
+            config_file: str|bool = None,
+            ip_version: Literal['ipv4', 'ipv6', 'both'] = 'both',
+            port: int|None = None) -> List[Dict]:
     """
     Performs a higher level keyscan operation including hostname resolution and availability checking.
 
@@ -102,6 +107,7 @@ def keyscan(hosts: Union[str, List[str]],
         hosts: Hostname or list of hostnames to scan
         config_file: Optional path to SSH config file to get port information
         ip_version: Restrict to 'ipv4', 'ipv6', or 'both' (default)
+        port: Optional port to use for the scan
 
     Returns:
         List of dictionaries with scan results, each containing:
@@ -110,23 +116,25 @@ def keyscan(hosts: Union[str, List[str]],
         - port: Port used for the scan
         - status: "alive" or "unreachable"
     """
-    # Remove the import from here since it's now at the module level
-
     if isinstance(hosts, str):
         hosts = [hosts]
 
     results = []
 
     for hostname in hosts:
-        # Get port from config if available
-        port = 22
-        try:
-            if config_file:
+        # Use provided port if set, otherwise get from config (default to 22)
+        host_port = 22  # default port
+        if port is None:
+            try:
                 config = get_ssh_config(hostname, config_file=config_file)
-                if 'port' in config:
-                    port = int(config['port'])
-        except Exception as e:
-            print(f"Error getting config for {hostname}: {e}")
+                if 'port' not in config or not config['port']:
+                    raise ValueError(f"No port from ssh -G for host '{hostname}'")
+                host_port = int(config['port'])
+            except Exception as e:
+                print(f"Error getting config for {hostname}: {e}")
+                raise
+        else:
+            host_port = port  # port from command line argument
 
         # Resolve hostname to IPs
         ip_addresses = resolve_hostname(hostname, ip_version)
@@ -138,12 +146,12 @@ def keyscan(hosts: Union[str, List[str]],
 
         for ip in ip_addresses:
             # Run keyscan on the resolved IP
-            scan_result = run_keyscan(ip, port)
+            scan_result = run_keyscan(ip, host_port)
 
             result = {
                 "hostname": hostname,
                 "ip": ip,
-                "port": port
+                "port": host_port
             }
 
             # Check if scan was successful
@@ -153,5 +161,9 @@ def keyscan(hosts: Union[str, List[str]],
                 result["status"] = "unreachable"
 
             results.append(result)
+
+            if ip_version == 'any' and result['status'] == "alive":
+                #  one ip for this hostname is alive, no need to check further
+                break
 
     return results
