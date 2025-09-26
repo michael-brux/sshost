@@ -17,11 +17,11 @@ def run_public_keyscan():
         return run_keyscan(hosts)
 
 #print(run_keyscan_simple())
-returncode, output, error = run_public_keyscan()
-print('Returncode:', returncode)
+result = run_public_keyscan()
+print('Returncode:', result.returncode)
 print('Output:')
-for line in output:
+for line in result.stdout.splitlines():
     print(line)
 print('Error:')
-for line in error:
+for line in result.stderr.splitlines():
     print(line)

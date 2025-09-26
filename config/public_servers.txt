@@ -5,3 +5,10 @@ git.sr.ht
 launchpad.net
 invent.kde.org
 codeberg.org
+sftp.hidrive.ionos.com
+sftp.hidrive.strato.com
+test.rebex.net
+demo.wftpserver.com
+speedtest.tele2.net
+ftp.dlptest.com
+sftp.demo.shopex.cn
